@@ -1,17 +1,23 @@
-# Validate ship game board:
-#
-#     all ships has to be used
-#     ship sizes: [number x length]: [1x1], [2x2], [2x3], [1x4], [1x5]
-#     can be only horizontal or verical
-#     cannot touch
-
 from typing import List, Set, Tuple
+
+# CONST
+DIRECTIONS: List[Tuple[int, int]] = [
+    (-1, 0),   # UP
+    (1, 0),    # DOWN
+    (0, -1),   # LEFT
+    (0, 1),    # RIGHT
+    (-1, -1),  # UP_LEFT
+    (-1, 1),   # UP_RIGHT
+    (1, -1),   # DOWN_LEFT
+    (1, 1),    # DOWN_RIGHT
+]
+
+DOCK: List[int] = [1, 2, 2, 3, 3, 4, 5]
 
 class Map:
     def __init__(self, data: List[List[int]]):
         self._data = data
 
-# Property ensures, that the atribute is updated automatically. Ex. when ones creates object game_map1, x and y are created normally via constructor and even if data changes for game_map1, x and y would be the same. If x and y are defined as property, they will be updated.
     @property
     def x(self) -> int:
         return len(self._data)
@@ -23,86 +29,202 @@ class Map:
     def size(self) -> Tuple[int, int]:
         return self.x, self.y
 
+#copied from Internet, dont fully know how to write it
     def display(self):
         for row in self._data:
             print(" ".join(["x" if cell == 1 else "." for cell in row]))
 
-def validate_map(check_list: List[bool]) -> bool:
-    return all(check_list)
+#Magic methods are something like operator overloading in C++
+    
+class Ship:
+    def __init__(self, coordinates: List[Tuple[int, int]]):
+        self.coordinates = coordinates
+    
+    def __len__(self) -> int:
+    	"""
+        Returns the number of parts of the ship (length).
+        """
+        return len(self.coordinates)
 
-def find_ships(game_map: Map) -> List[List[Tuple[int, int]]]:
-    ship_list: List[List[Tuple[int, int]]] = []
+    def __eq__(self, other: 'Ship') -> bool:
+    	"""
+        Checks if two ships are equal by comparing the number of parts.
+        """
+        return len(self) == len(other)
 
-    # Board sizes
+    #Not fully writen alone, a lot of errors made, needed external sources
+    #To be understood	
+    def is_orientation_ok(self) -> bool:
+        """
+        Checks if the ship is  horizontal or vertical.
+        """
+        if len(self) == 1:
+            return True  # A single-field ship is always good
+
+        # Extract x and y coordinates
+	x_coords: List[int] = [coord[0] for coord in self.coordinates]
+	y_coords: List[int] = [coord[1] for coord in self.coordinates]
+
+        # If there is more than one unique value in both x and y coordinates,
+        # the ship is neither horizontal nor vertical
+        return len(set(x_coords)) == 1 or len(set(y_coords)) == 1
+
+
+def initialize_xy_board(data_size_x: int, data_size_y: int):
+    """
+    Initializes a 2D matrix with zeros.
+    
+    Args:
+        data_size_x (int): number of rows
+        data_size_y (int): number of columns
+    
+    Returns:
+        list: A 2D list of shape (data_size_x, data_size_y) filled with zeros.
+    """
+    return [[0] * data_size_y for _ in range(data_size_x)]
+
+def is_in_board(x: int, y: int, size_x: int, size_y: int) -> bool:
+    """
+    Checks if the coordinates (x, y) are within the bounds of the board
+    
+    Args:
+        x (int): row index
+        y (int): column index
+        size_x (int): number of rows in the matrix
+        size_y (int): number of columns in the matrix
+    
+    Returns:
+        bool: True if the coordinates are within the board.
+    """
+    return 0 <= x < size_x and 0 <= y < size_y
+
+def is_unvisited(row: int, col: int, checked_field: List[List[int]]) -> bool:
+    """
+    Checks if a cell has not been visited.
+    
+    Args:
+        row (int): Row index of the cell
+        col (int): Column index of the cell
+        checked_field (List[List[int]]): Tracks checked fields
+    
+    Returns:
+        bool: True if the cell has not been visited, False otherwise.
+    """
+    return checked_field[row][col] == 0
+
+def is_ship_part(row: int, col: int, data: List[List[int]]) -> bool:
+    """
+    Checks if a cell is part of the ship.
+    
+    Args:
+        row (int): Row index of the cell
+        col (int): Column index of the cell
+        data (List[List[int]]): Game map data, where 1 = field with ship
+    
+    Returns:
+        bool: True if the cell is part of the ship, False otherwise.
+    """
+    return data[row][col] == 1
+
+def mark_as_visited(row: int, col: int, checked_field: List[List[int]]) -> None:
+    """
+    Marks a cell as visited.
+    
+    Args:
+        row (int): Row index 
+        col (int): Column index 
+        checked_field (List[List[int]]): Tracks checked fields
+    """
+    checked_field[row][col] = 1
+
+def explore_ship(
+    start_position: Tuple[int, int],
+    data: List[List[int]],
+    checked_field: List[List[int]],
+    size_x: int,
+    size_y: int
+) -> Ship:
+    ship_coordinates: List[Tuple[int, int]] = []
+    stack: List[Tuple[int, int]] = [start_position]
+    ship_coordinates.append(start_position)
+    checked_field[start_position[0]][start_position[1]] = 1
+
+    while stack:
+        current = stack.pop()
+        for row_change, col_change in DIRECTIONS:
+            new_row, new_column = current[0] + row_change, current[1] + col_change
+            if (
+                is_in_board(new_row, new_column, size_x, size_y)
+                and is_unvisited(new_row, new_column, checked_field)
+                and is_ship_part(new_row, new_column, data)
+            ):
+                ship_coordinates.append((new_row, new_column))
+                stack.append((new_row, new_column))
+                mark_as_visited(new_row, new_column, checked_field)
+
+    return Ship(ship_coordinates)
+    
+
+def find_ships(game_map: 'Map') -> List[Ship]:
+	"""
+    Detects all ships and returns a list of their coordinates.
+    
+    Args:
+        game_map ('Map'): The game map object containing board game.
+    
+    Returns:
+        List[List[Tuple[int, int]]]: A list of lists, where each sublist contains 	coordinates of a ship.
+    """
+    
+    ship_list: List[Ship] = []
+    
+    # Get map size and data
     data_size_x, data_size_y = game_map.size()
     data = game_map._data
 
-    checked_field: List[List[int]] = [[0 for _ in range(data_size_y)] for _ in range(data_size_x)]
+    checked_field = initialize_xy_board(data_size_x, data_size_y)
 
-    for r in range(data_size_x):
-        for c in range(data_size_y):
-            if checked_field[r][c] == 1:
-                continue
-
-            if data[r][c] == 1:
-                ship: Set[Tuple[int, int]] = set()
-                ship_seed: Tuple[int, int] = (r, c)
-                ship.add(ship_seed)
-                checked_field[r][c] = 1
-
-                step_vertical = [-1, 0, 1]
-                step_horizontal = [-1, 0, 1]
-
-                stack: List[Tuple[int, int]] = [ship_seed]
-
-                while stack:
-                    current = stack.pop()
-                    for stepv in step_vertical:
-                        for steph in step_horizontal:
-                            new_pos: Tuple[int, int] = (current[0] + stepv, current[1] + steph)
-
-                            if (
-                                0 <= new_pos[0] < data_size_x
-                                and 0 <= new_pos[1] < data_size_y
-                                and checked_field[new_pos[0]][new_pos[1]] == 0
-                            ):
-
-                                if data[new_pos[0]][new_pos[1]] == 1:
-                                    ship.add(new_pos)
-                                    stack.append(new_pos)
-
-                                checked_field[new_pos[0]][new_pos[1]] = 1
-
-                ship_list.append(list(ship))
+    for row in range(data_size_x):
+        for column in range(data_size_y):
+            iif is_unvisited(row, column, checked_field) and is_ship_part(row, column, data):
+                ship = explore_ship((row, column), data, checked_field, data_size_x, data_size_y)
+                ship_list.append(ship)
 
     return ship_list
 
-def check_nb_of_ships(ship_list: List[List[Tuple[int, int]]]) -> bool:
-    reference: List[int] = [1, 2, 2, 3, 3, 4, 5]
+
+def check_nb_of_ships(ship_list: List[Ship]) -> bool:
+    """
+    Checks if the number of ships in the list matches the reference
+
+    Args:
+        ship_list (List[List[Tuple[int, int]]]): List of ships,
+    
+    Returns:
+        bool: True if the number of ships matches the reference
+    """
     sample: List[int] = [len(ship) for ship in ship_list]
 
-    reference.sort()
-    sample.sort()
+    DOCK.sort()  
+    sample.sort()  
 
-    return reference == sample
+    return DOCK == sample  
 
-def check_ship_orientation(ship_list: List[List[Tuple[int, int]]]) -> bool:
-    for ship in ship_list:
-        if len(ship) == 1:
-            continue
 
-        x_coords: List[int] = [coord[0] for coord in ship]
-        y_coords: List[int] = [coord[1] for coord in ship]
+def check_ship_orientation(ship_list: List[Ship]) -> bool:
+    """
+    Checks if all ships in the list are aligned in one direction.
+    """
+    # all() makes end
+    # map returns result of is_ship_orientation_ok for every object in ship_list
 
-        if len(set(x_coords)) > 1 and len(set(y_coords)) > 1:
-            return False
+    return all(map(is_ship_orientetion_ok, ship_list))
 
-    return True
 
-def check_separation(ship_list: List[List[Tuple[int, int]]]) -> bool:
+def check_separation(ship_list: List[Ship]) -> bool:
     ship_positions: Set[Tuple[int, int]] = set()
     for ship in ship_list:
-        for r, c in ship:
+        for r, c in ship.coordinates:
             ship_positions.add((r, c))
 
     directions: List[Tuple[int, int]] = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
@@ -120,58 +242,35 @@ def transform_string_to_list(data: str) -> List[List[int]]:
     matrix: List[List[int]] = [[1 if element == "x" else 0 for element in row.split()] for row in rows]
     return matrix
 
-print("Start validation")
+if __name__ == "__main__":
+    
+    data = """\
+    . x x x . . x
+    . x . x x . .
+    x x . . . x .
+    x . x . x . .
+    . . x . x . x
+    x x . . x . .
+    """
+    
+    transformed_data: List[List[int]] = transform_string_to_list(data)
+    game_map: Map = Map(transformed_data)
 
-data: str = """
-  . x . . . . x .
-  . x . x x . . .
-  . . . . . . . .
-  . x x x x x . .
-  . . . . . . . .
-  x x x . . x . x
-  . . . . x . . .
-  x x x x . x . .
-"""
+    ships: List[Ship] = find_ships(game_map)
+    print(f"Ships found: {ships}")
 
-data_num: List[List[int]] = transform_string_to_list(data)
-game_map = Map(data_num)
+    if check_nb_of_ships(ships):
+        print("The number of ships is correct.")
+    else:
+        print("The number of ships is incorrect.")
 
-game_map.display()
+    if check_ship_orientation(ships):
+        print("All ships are aligned correctly.")
+    else:
+        print("Not all ships are aligned correctly.")
 
-ship_list: List[List[Tuple[int, int]]] = find_ships(game_map)
+    if check_separation(ships):
+        print("Ships are properly separated.")
+    else:
+        print("Ships are too close to each other.")
 
-condition_nb_of_ships: bool = check_nb_of_ships(ship_list)
-condition_ship_orientation: bool = check_ship_orientation(ship_list)
-condition_separation: bool = check_separation(ship_list)
-
-print(f"Number of ships: {condition_nb_of_ships}")
-print(f"Ships separation: {condition_separation}")
-print(f"Ship orientation: {condition_ship_orientation}")
-
-check_list: List[bool] = [
-    condition_nb_of_ships,
-    condition_ship_orientation,
-    condition_separation,
-]
-
-is_map_correct: bool = validate_map(check_list)
-
-if is_map_correct:
-    print("Validation finished: Map correct")
-else:
-    print("Validation finished: Map wrong")
-
-
-# Start validation
-# [0, 1, 0, 0, 0, 0, 1, 0]
-# [0, 1, 0, 1, 1, 0, 0, 0]
-# [0, 0, 0, 0, 0, 0, 0, 0]
-# [0, 1, 1, 1, 1, 1, 0, 0]
-# [0, 0, 0, 0, 0, 0, 0, 0]
-# [1, 1, 1, 0, 0, 1, 0, 1]
-# [0, 0, 0, 0, 1, 0, 0, 0]
-# [1, 1, 1, 1, 0, 1, 0, 0]
-# Number of ships: False
-# Ships separation: True
-# Ship orientation: False
-# Validation finished: Map wrong
