@@ -250,7 +250,7 @@ def check_separation(ship_list: List[Ship], board_size: Tuple[int, int]) -> bool
 
     Args:
         ship_list (List[Ship]): A list of Ship objects.
-        board_size (Tuple[int, int]): The size of the board as (rows, columns).
+        board_size (Tuple[int, int]): Rows, columns of the board.
 
     Returns:
         bool:
@@ -272,27 +272,39 @@ def check_separation(ship_list: List[Ship], board_size: Tuple[int, int]) -> bool
                 if is_within_board(new_row, new_col, rows, cols):
                     adjacent_fields.add((new_row, new_col))
 
-    # return occupied_fields.isdisjoint(adjacent_fields - occupied_fields)
-    return occupied_fields.isdisjoint(adjacent_fields)
+    return occupied_fields.isdisjoint(adjacent_fields - occupied_fields)
+    #return occupied_fields.isdisjoint(adjacent_fields)
 
 
 def transform_string_to_list(data: str) -> List[List[int]]:
     rows: List[str] = data.strip().split("\n")
-    matrix: List[List[int]] = [
-        [1 if element == "x" else 0 for element in row.split()] for row in rows
-    ]
+    matrix: List[List[int]] = []
+    for row in rows:
+        row_list: List[int] = []
+        for element in row.split():
+            row_list.append(1 if element == "x" else 0)
+        matrix.append(row_list)
     return matrix
 
+def transform_string_to_list_advanced(data: str) -> List[List[int]]:
+    def row_generator(rows: List[str]) -> List[int]:
+        for row in rows:
+            yield [1 if element == "x" else 0 for element in row.split()]
+
+    rows: List[str] = data.strip().split("\n")
+    return list(row_generator(rows))
 
 if __name__ == "__main__":
 
     data = """\
-    . x x x . . x
-    . x . x x . .
-    x x . . . x .
-    x . x . x . .
-    . . x . x . x
-    x x . . x . .
+    . x . . . . x .
+    . x . x x . . .
+    . . . . . . . .
+    . x x x x x . .
+    . . . . . . . .
+    x x x . . x . x
+    . . . . . x . .
+    x x x x . x . .
     """
 
     transformed_data: List[List[int]] = transform_string_to_list(data)
