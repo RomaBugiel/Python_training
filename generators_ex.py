@@ -6,6 +6,28 @@
 # memory-efficient iteration. They are defined like regular functions but use `yield` instead of `return`.
 # Examples of use cases include reading large files, processing streams, or generating infinite sequences.
 
+
+# reminder: enumerate - fuction that applies indexing for each elemenet of iterable object. Returns tuple [krotke] in format: (intex, element)
+
+def all_lines(file_path: str):
+     with open(file_path, 'r') as file:
+        for line in file:
+            yield line
+
+def odd_lines_with_numbers_next(file_path: str):
+    lines = all_lines(file_path) # returns generator to all lines
+    line_num = 1
+
+    while True:
+        line = next(lines, None) # take line
+
+        if line is None:
+            break
+        if line_num % 2 != 0:
+            yield f"{line_num}: {line}"
+        line_num += 1
+
+
 def odd_lines_with_numbers(file_path: str):
     with open(file_path, 'r') as file:
         for line_number, line in enumerate(file, start=1):
@@ -15,8 +37,7 @@ def odd_lines_with_numbers(file_path: str):
 
 file_path = "example.txt"
 
-for odd_line in odd_lines_with_numbers(file_path):
+for odd_line in odd_lines_with_numbers_next(file_path):
     print(odd_line)
 
 
-# reminder: enumerate - fuction that applies indexing for each elemenet of iterable object. Returns tuple [krotke] in format: (intex, element)
