@@ -11,21 +11,29 @@
 
 def all_lines(file_path: str):
      with open(file_path, 'r') as file:
-        for line in file:
-            yield line
+        #for line in file:
+        #    yield line
+        # equivalent:
+        yield from file
 
 def odd_lines_with_numbers_next(file_path: str):
     lines = all_lines(file_path) # returns generator to all lines
     line_num = 1
 
-    while True:
-        line = next(lines, None) # take line
+    #while True:
+    #   line = next(lines, None) # take line
 
-        if line is None:
-            break
-        if line_num % 2 != 0:
-            yield f"{line_num}: {line}"
-        line_num += 1
+    #   if line is None:
+    #        break
+    #    if line_num % 2 != 0:
+    #        yield f"{line_num}: {line}"
+    #    line_num += 1
+    # equivalent:
+    while line := next(lines, None):
+        yield line
+        next(lines, None)
+
+# := walrus operator - jest to operator przypisania w wyrażeniu (assignment expression), który pozwala przypisać wartość do zmiennej w ramach innego wyrażenia.
 
 
 def odd_lines_with_numbers(file_path: str):
