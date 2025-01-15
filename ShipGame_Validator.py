@@ -55,6 +55,17 @@ class Ship:
         """
         return len(self) == len(other)
 
+    def __hash__(self) -> int:
+        """
+        Returns a hash value for the ship based on its coordinates.
+        - allows to use instances of this class as keys in maps and sets
+        - if class has __eq__ it should also has hash function, which works that object are the same, if the hash is the same
+        """
+        # Sort coordinates to ensure hash consistency regardless of order
+        # Imagine a ship which is two fields [(1,1), (1,0)] but once given as mentioned, and once [(1,0), (1,1)] - this approach will generate various hashes, but ship occupies he same fields. Sorting is to avoid mistake here.
+        sorted_coords = tuple(sorted(self.coordinates))
+        return hash(sorted_coords)
+
     # Not fully writen alone, a lot of errors made, needed external sources
     # To be understood
     def is_orientation_ok(self) -> bool:
